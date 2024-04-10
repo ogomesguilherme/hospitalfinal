@@ -5,24 +5,22 @@ namespace app;
 require_once("vendor/autoload.php");
 
 use app\conn;
-use mysqli;
 
 class novoPacienteClass {
     public $Name, $MomName, $Birthday;
     public $handleErrors = [];
     public $isValid = false;
 
-    function __construct($Name, $MomName, $Birthday)
+    function __construct($form)
     {
-        $this->Name = $this->validadeString($Name, "Preencha o nome corretamente");
-        $this->MomName = $this->validadeString($MomName, "Preencha o nome da mãe corretamente");
-        $this->Birthday = $this->validadeDate($Birthday, "Data inválida");
+        $this->Name = $this->validadeString($form['Name'], "Preencha o nome corretamente");
+        $this->MomName = $this->validadeString($form['MomName'], "Preencha o nome da mãe corretamente");
+        $this->Birthday = $this->validadeDate($form['Birthday'], "Data inválida");
 
         if (count($this->handleErrors) == 0) {
             $this->isValid = true;
+            $this->register();
         }
-
-        echo var_dump($this->handleErrors);
     }
 
     function validadeString(string $string, string $errorMsg){
@@ -35,25 +33,27 @@ class novoPacienteClass {
     }
 
     function validadeDate(string $string, string $errorMsg) : string {
-        $arr = explode("/", $string);
-        $day = $arr[0];
+        $arr = explode("-", $string);
+        $day = $arr[2];
         $month = $arr[1];
-        $year = $arr[2];
-        if (!checkdate($month, $day, $year)){
+        $year = $arr[0];
+        if (!checkdate(intval($month), intval($day), intval($year))){
             $this->handleErrors[] = $errorMsg;
             return "";
         }
         return implode("-", [$year,$month,$day]);
     }
 
-    function register(){
-        if ($this->isValid) {
+    private function register(){
+        try {
             $mysqli = conn::connect();
             $stmt = $mysqli -> prepare("INSERT INTO pacientes (Name, MomName, Birthday) VALUES (?, ?, ?)");
             $stmt -> bind_param("sss", $this->Name, $this->MomName, $this->Birthday);
             $stmt -> execute();
             $stmt -> close();
             $mysqli -> close();
+        } catch (\Throwable $th) {
+            throw $th;
         }
     }
 }
